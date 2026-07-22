@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<!--
+  INPIOJUS 1.0.0 — IA Jurídica / Argumentos Processuais
+  Desenvolvedor: Joaquim Pedro de Morais Filho <zicutake@mail.ru>
+  Licença: MIT · © 2026 · Assinado build-1000
+-->
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Joaquim Pedro de Morais Filho">
+    <meta name="contact" content="zicutake@mail.ru">
+    <meta name="version" content="1.0.0">
+    <meta name="application-name" content="INPIOJUS">
+
+    <meta name="description" content="Gerador de Petições Jurídicas de Alta Performance e Resumos. Alimentado por Gemini 2.5 Flash.">
+    <title>INPIOJUS 1.0.0 · IA Jurídica | Joaquim Pedro de Morais Filho</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    
+    <!-- Tailwind (sem preflight para não quebrar o layout principal) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            corePlugins: { preflight: false }
+        }
+    </script>
+
+    <!-- Bibliotecas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    
+    <style>
+        /* --- ESTILOS GERAIS E VARIÁVEIS INPIOJUS --- */
+        :root {
+            --primary: #1e3a8a; /* Azul Institucional Escuro */
+            --secondary: #f1f5f9; /* Cinza Gelo */
+            --accent: #15803d; /* Verde Bandeira */
+            --text-primary: #0f172a; /* Preto Escuro */
+            --text-secondary: #334155; /* Cinza Grafite */
+            --bg-light: #f8fafc;
+            --danger: #b91c1c; 
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --border-radius: 8px;
+            --border-color: #cbd5e1;
+
+            /* VARIÁVEIS KSM SECURITY */
+            --ksm-green:      #00ff9d;
+            --ksm-green-dim:  #00c475;
+            --ksm-alert:      #ff3366;
+            --ksm-dark:       #0a0f0c;
+            --ksm-darker:     #050a07;
+            --ksm-glass:      rgba(8, 18, 14, 0.92);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            min-height: 100vh;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: transparent;
+            padding: 2rem 5vw;
+        }
+
+        /* --- CABEÇALHO INSTITUCIONAL --- */
+        #header {
+            text-align: center;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        .header-logo {
+            width: 80px;
+            height: auto;
+            margin-bottom: 1rem;
+        }
+        #header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            color: var(--primary);
+            font-weight: 700;
+            letter-spacing: -0.015em;
+            line-height: 1.2;
+        }
+        #header p {
+            font-size: clamp(1rem, 1.5vw, 1.15rem);
+            color: var(--text-secondary);
+            margin-top: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* --- SEÇÃO DE INPUTS --- */
+        #input-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        .config-panel {
+            background: var(--secondary);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+        }
+        
+        .config-panel label {
+            font-weight: 600;
+            color: var(--primary);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        
+        .config-panel select {
+            width: 100%;
+            padding: 0.8rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            background: #fff;
+            color: var(--text-primary);
+            outline: none;
+            transition: all 0.2s;
+        }
+        
+        .config-panel select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15);
+        }
+
+        #pdf-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 2rem;
+            border: 2px dashed var(--primary);
+            border-radius: var(--border-radius);
+            font-size: 1.15rem;
+            font-weight: 500;
+            background-color: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            color: var(--primary);
+        }
+        #pdf-upload-label:hover {
+            background-color: #eff6ff;
+            box-shadow: var(--shadow-sm);
+        }
+        #pdf-upload { display: none; }
+        
+        #text-input {
+            width: 100%;
+            height: 250px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 1.05rem;
+            font-family: 'Inter', sans-serif;
+            background-color: #fff;
+            resize: vertical;
+            line-height: 1.6;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        #text-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(30, 58, 138, 0.15);
+        }
+
+        /* --- BOTÕES DE AÇÃO PRINCIPAIS --- */
+        #generate-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        
+        .generate-btn {
+            padding: 1.1rem;
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .generate-btn:hover {
+            background-color: #1e40af;
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        .generate-btn:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* --- MENSAGENS E ALERTAS --- */
+        .status-box {
+            margin-top: 1.5rem;
+            font-size: 1.05rem;
+            text-align: center;
+            padding: 1.25rem;
+            border-radius: var(--border-radius);
+            width: 100%;
+            font-weight: 500;
+        }
+        #status-message {
+            color: var(--text-secondary);
+            background-color: var(--secondary);
+            border: 1px solid var(--border-color);
+        }
+        #error-message {
+            color: #991b1b;
+            background-color: #fee2e2;
+            border: 1px solid #f87171;
+            display: none;
+        }
+        
+        #summary {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.15rem;
+            color: #333;
+            background-color: #fffbeb;
+            border: 1px solid #facc15;
+            border-left: 6px solid #f59e0b;
+            padding: 2.5rem;
+            border-radius: var(--border-radius);
+            width: 100%;
+            margin-top: 1.5rem;
+            line-height: 1.8;
+            display: none;
+            white-space: pre-wrap;
+        }
+
+        /* --- DOWNLOAD SECTION --- */
+        #download-section {
+            margin-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            width: 100%;
+        }
+        .download-link {
+            padding: 1rem 3rem;
+            background: var(--accent);
+            color: #fff;
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            font-size: 1.15rem;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .download-link:hover {
+            background: #166534;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* --- OVERLAY DE CARREGAMENTO --- */
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .loader {
+            width: 70px;
+            height: 70px;
+            border: 6px solid var(--secondary);
+            border-top: 6px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #loading-text {
+            margin-top: 1.5rem;
+            font-size: 1.2rem;
+            color: var(--primary);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- MODAIS PRINCIPAIS --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+        .modal-content {
+            background: #fff;
+            padding: 2.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            max-width: 550px;
+            width: 100%;
+            text-align: center;
+            animation: slide-up 0.3s ease-out;
+            border-top: 6px solid var(--primary);
+        }
+        @keyframes slide-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-content h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+        .modal-content p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+        .modal-content input, .modal-content select {
+            padding: 1rem;
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+        .modal-content input:focus, .modal-content select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .modal-buttons {
+            display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;
+        }
+        .modal-btn {
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            flex: 1;
+            transition: all 0.2s;
+        }
+        .modal-btn.confirm {
+            background: var(--primary); color: #fff;
+        }
+        .modal-btn.confirm:hover { background: #1e40af; }
+        .modal-btn.secondary {
+            background: var(--secondary); color: var(--text-primary); border: 1px solid var(--border-color);
+        }
+        .modal-btn.secondary:hover { background: #e2e8f0; }
+        
+        #toast-notification {
+            position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
+            background-color: var(--text-primary); color: #fff;
+            padding: 1rem 2rem; border-radius: 50px; z-index: 10001;
+            box-shadow: var(--shadow-lg); transition: bottom 0.5s ease; font-weight: 500;
+        }
+        #toast-notification.show { bottom: 30px; }
+
+        @media (max-width: 768px) {
+            .modal-buttons { flex-direction: column; }
+            .modal-btn { width: 100%; }
+        }
+
+        /* --- ESTILOS KSM SECURITY GADGET --- */
+        #ksm-gadget-root {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            pointer-events: none;
+            font-feature-settings: "liga" 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            text-align: left;
+        }
+
+        #ksm-top-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            top: auto;
+            right: auto;
+            transform: none;
+            
+            min-width: 180px;
+            height: 48px;
+            padding: 0 16px;
+            background: rgba(10, 15, 12, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 255, 157, 0.14);
+            border-radius: 9999px;
+            box-shadow: 
+                0 4px 30px rgba(0,0,0,0.5),
+                0 0 0 1px rgba(0, 255, 157, 0.08) inset;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            
+            transition: all 0.4s cubic-bezier(0.34, 1.16, 0.64, 1), opacity 0.8s ease;
+            pointer-events: auto;
+            user-select: none;
+            z-index: 10000;
+            opacity: 1;
+        }
+
+        #ksm-top-bar:hover,
+        #ksm-top-bar:focus-within {
+            background: rgba(10, 20, 16, 0.94);
+            border-color: rgba(0, 255, 157, 0.28);
+            box-shadow: 0 8px 40px rgba(0, 255, 157, 0.12);
+            transform: scale(1.02);
+            opacity: 1 !important;
+        }
+
+        #ksm-top-bar.expanded {
+            inset: 0;
+            top: 0; 
+            left: 0;
+            bottom: 0;
+            transform: none;
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            background: var(--ksm-darker);
+            border: none;
+            box-shadow: none;
+            overflow-y: auto;
+            flex-direction: column;
+            justify-content: flex-start;
+            padding: 0;
+            opacity: 1 !important;
+        }
+
+        #ksm-blocker {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(15px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            z-index: 9998;
+        }
+
+        #ksm-blocker.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #ksm-header-expanded {
+            display: none;
+            width: 100%;
+            padding: 20px;
+            border-bottom: 1px solid rgba(0, 255, 157, 0.1);
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #ksm-top-bar.expanded #ksm-header-expanded {
+            display: flex;
+        }
+
+        #ksm-drawer {
+            display: none;
+            width: 100%;
+            flex: 1;
+            padding: 5vh 4vw;
+            overflow-y: auto;
+        }
+
+        #ksm-top-bar.expanded #ksm-drawer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ksm-card {
+            width: 100%;
+            max-width: 450px;
+            background: rgba(12, 18, 15, 0.6);
+            border: 1px solid rgba(0, 255, 157, 0.12);
+            border-radius: 16px;
+            padding: 2rem 1.75rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .ksm-card.wide {
+            max-width: 800px;
+        }
+
+        .ksm-input {
+            width: 100%;
+            padding: 0.9rem 1.1rem;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(0, 255, 157, 0.2);
+            border-radius: 10px;
+            color: #f0fff0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .ksm-input:focus {
+            border-color: var(--ksm-green);
+            box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.18);
+            background: rgba(0, 40, 20, 0.3);
+        }
+
+        .ksm-btn {
+            padding: 0.9rem 1.6rem;
+            background: linear-gradient(145deg, rgba(0,255,157,0.14), rgba(0,255,157,0.05));
+            border: 1px solid var(--ksm-green-dim);
+            color: var(--ksm-green);
+            border-radius: 10px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.25s;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .ksm-btn:hover, .ksm-btn.active-method {
+            background: var(--ksm-green);
+            color: #000;
+            box-shadow: 0 0 24px rgba(0,255,157,0.45);
+            transform: translateY(-1px);
+        }
+
+        .ksm-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #ksm-mini-status {
+            font-size: 0.78rem;
+            font-weight: 500;
+            letter-spacing: 1.2px;
+            color: rgba(0, 255, 157, 0.8);
+            text-shadow: 0 0 6px rgba(0, 255, 157, 0.4);
+        }
+
+        #ksm-mini-icon {
+            font-size: 1.1rem;
+            color: var(--ksm-green-dim);
+        }
+
+        .hidden-ksm { display: none !important; }
+        
+        #ksm-qrcode {
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            margin: 10px auto;
+            width: fit-content;
+        }
+        #ksm-qrcode img { display: block; margin: auto; }
+
+        @media (max-width: 640px) {
+            #ksm-top-bar:not(.expanded) { 
+                bottom: 10px;
+                left: 10px;
+                min-width: 160px;
+                height: 44px;
+                padding: 0 14px;
+            }
+            .ksm-card { padding: 1.5rem 1rem; }
+            #ksm-header-expanded { padding: 15px; }
+            .ksm-card.wide { flex-direction: column; }
+        }
+
+        #ksm-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--ksm-green);
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 10002;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        #ksm-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        
+        <header id="header">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Coat_of_arms_of_Brazil.svg/1280px-Coat_of_arms_of_Brazil.svg.png" alt="Brasão da República" class="header-logo" crossorigin="anonymous">
+            <h1>Sistema INPIOJUS</h1>
+            <p>Gerador de Petições Governamentais e Resumos (Gemini 2.5 AI)</p>
+        </header>
+
+        <main>
+            <section id="input-section">
+                
+                <div class="config-panel">
+                    <label for="petition-size">Volume e Robustez Argumentativa (Extensão da Petição):</label>
+                    <select id="petition-size">
+                        <option value="padrão, objetiva e direta, adequada para despachos rápidos">Padrão (Objetiva, Clara e Direta)</option>
+                        <option value="longa e exaustiva, com profunda fundamentação jurídica, teses doutrinárias e ampla citação de jurisprudência atualizada dos tribunais superiores" selected>Robusta (Longa, Elevada Carga Jurisprudencial e Doutrinária)</option>
+                        <option value="extremamente extensa e massiva, explorando todas as nuances jurídicas possíveis em níveis acadêmicos, sem economizar nas palavras e na defesa detalhada de cada tópico">Extrema (Tratado Jurídico, Máxima Quantidade de Caracteres Permitida)</option>
+                    </select>
+                </div>
+
+                <label for="pdf-upload" id="pdf-upload-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span>Carregar Decisão Originária (PDF)</span>
+                </label>
+                <input type="file" id="pdf-upload" accept=".pdf" onchange="handleFileUpload(event)">
+                
+                <textarea id="text-input" placeholder="Ou cole a ementa/íntegra da decisão judicial impugnada aqui..." oninput="handleTextInput(event)"></textarea>
+                
+                <div id="generate-buttons">
+                    <button class="generate-btn" id="habeas-btn" onclick="showTribunalModal('habeas')" disabled>Habeas Corpus</button>
+                    <button class="generate-btn" id="embargos-btn" onclick="showTribunalModal('embargos')" disabled>Embargos Decl.</button>
+                    <button class="generate-btn" id="recurso-btn" onclick="showTribunalModal('recurso')" disabled>Recurso Ordinário</button>
+                    <button class="generate-btn" id="mandado-btn" onclick="showTribunalModal('mandado')" disabled>Mandado Seg.</button>
+                    <button class="generate-btn" id="agravo-regimental-btn" onclick="showTribunalModal('agravo-regimental')" disabled>Agravo Regimental</button>
+                    <button class="generate-btn" id="agravo-interno-btn" onclick="showTribunalModal('agravo-interno')" disabled>Agravo Interno</button>
+                    <button class="generate-btn" id="summary-btn" onclick="generateSummary()" disabled style="background-color: var(--accent);">Resumir Decisão</button>
+                </div>
+                
+                <div id="status-message" class="status-box">Insira a decisão impugnada para liberar o sistema.</div>
+                <div id="error-message" class="status-box"></div>
+                <div id="summary"></div>
+            </section>
+
+            <section id="download-section"></section>
+        </main>
+    </div>
+
+    <!-- MODAIS E OVERLAYS PRINCIPAIS -->
+    <div id="loading-overlay">
+        <div class="loader"></div>
+        <p id="loading-text">Processando IA...</p>
+    </div>
+
+    <div id="impetrante-modal" class="modal">
+        <div class="modal-content">
+            <h2>Qualificação do Assinante</h2>
+            <p>Preencha os dados de quem assinará a peça processual.</p>
+            
+            <div style="text-align: left; margin-bottom: 1.2rem; padding: 0.5rem; background: var(--secondary); border-radius: var(--border-radius);">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" id="juspostulandi-check" style="width: auto; margin: 0; transform: scale(1.2);">
+                    <span style="font-weight: 600; color: var(--primary);">Atuar em Causa Própria (Jus Postulandi)</span>
+                </label>
+            </div>
+
+            <input type="text" id="impetrante-input" placeholder="Nome Completo do(a) Assinante">
+            <input type="text" id="impetrante-cpf-input" placeholder="OAB (se advogado) ou CPF (se Jus Postulandi)">
+            
+            <div style="display: flex; gap: 1rem;">
+                <input type="text" id="cidade-input" placeholder="Cidade (ex: São Paulo)" style="flex: 2;">
+                <input type="text" id="estado-input" placeholder="UF (ex: SP)" style="flex: 1;" maxlength="2">
+            </div>
+
+            <div style="text-align: left; margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">
+                <strong>Nota de Privacidade Legal:</strong> O sistema foi instruído a <b>não</b> utilizar Profissão, Estado Civil ou Endereço Completo. A qualificação será restrita apenas aos dados acima (Nome, Documento, Cidade e Estado).
+            </div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" onclick="keepImpetrante()">Usar Padrão</button>
+                <button class="modal-btn confirm" onclick="confirmImpetrante()">Atualizar Cadastro</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tribunal-modal" class="modal">
+        <div class="modal-content">
+            <h2>Endereçamento</h2>
+            <p>Selecione a jurisdição competente para o julgamento da peça:</p>
+            <select id="tribunal-select"></select>
+            <div class="modal-buttons">
+                <button class="modal-btn confirm" onclick="confirmTribunal()">Confirmar Competência</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="combine-pdf-modal" class="modal">
+        <div class="modal-content">
+            <h2>Acautelamento (Anexo)</h2>
+            <p>Deseja instruir a petição anexando a decisão judicial originária ao final (Volume Único)?</p>
+            <div class="modal-buttons">
+                 <button class="modal-btn secondary" onclick="skipCombinePDFs()">Dispensar</button>
+                <button class="modal-btn confirm" onclick="combinePDFs()">Instruir (Combinar)</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast-notification"></div>
+
+    <!-- DOM KSM SECURITY GADGET -->
+    <div id="ksm-gadget-root" style="display:none!important">
+        <div id="ksm-top-bar">
+            <div class="flex items-center gap-3" id="ksm-collapsed-content">
+                <i id="ksm-mini-icon" class="fas fa-spinner fa-spin text-zinc-500"></i>
+                <span id="ksm-mini-status" class="text-zinc-400">CONNECTING...</span>
+            </div>
+
+            <button 
+                id="ksm-expand-btn"
+                onclick="ksmToggleExpand('auto')"
+                class="ksm-btn text-xs px-3 py-1 font-medium ml-auto hidden" style="padding: 0.4rem 0.8rem;">
+                ACCESS
+            </button>
+
+            <div id="ksm-header-expanded">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-shield-alt text-[var(--ksm-green)] text-xl"></i>
+                    <span class="font-bold tracking-widest text-[var(--ksm-green)]">KSM SECURITY</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="ksmCollapse()" class="text-red-500 hover:text-red-400 text-sm font-bold bg-red-500/10 px-3 py-1 rounded">CLOSE X</button>
+                </div>
+            </div>
+
+            <div id="ksm-drawer">
+                <div id="ksm-view-payment" class="ksm-card wide hidden-ksm">
+                    <div class="flex flex-col md:flex-row gap-8">
+                        
+                        <div class="flex flex-col items-center justify-center bg-black/40 p-6 rounded-xl border border-white/10 w-full md:w-1/2">
+                            <div class="text-[var(--ksm-green)] mb-2 font-bold flex items-center gap-2">
+                                <i class="fa-brands fa-pix text-xl"></i> Pix
+                            </div>
+                            <div id="ksm-qrcode" class="min-h-[160px] min-w-[160px] flex items-center justify-center border-2 border-dashed border-zinc-700 bg-white">
+                                <span class="text-zinc-400 text-sm px-4 text-center" id="qr-placeholder">Aguardando geração...</span>
+                            </div>
+                            <div id="ksm-pay-status" class="mt-4 text-sm font-mono text-[var(--ksm-alert)] animate-pulse flex items-center gap-2">
+                                <i class="fas fa-circle-exclamation"></i> PAGAMENTO PENDENTE
+                            </div>
+                        </div>
+
+                        <div class="flex-1 flex flex-col justify-center">
+                            <div class="border-l-2 border-[var(--ksm-alert)] pl-4 mb-6">
+                                <h2 class="text-[var(--ksm-alert)] text-2xl font-bold tracking-widest animate-pulse">ACESSO BLOQUEADO</h2>
+                                <p class="text-zinc-400 text-sm mt-1">É necessário adquirir a licença de 24 horas para visualizar esta página protegida.</p>
+                            </div>
+
+                            <div class="flex justify-between items-end mb-4 pb-2 border-b border-white/10">
+                                <span class="text-xs text-zinc-500 uppercase">Valor da Licença:</span>
+                                <span class="text-3xl text-[var(--ksm-green)] font-bold">R$ 6,90</span>
+                            </div>
+
+                            <button onclick="generatePix()" id="btn-generate-pix" class="ksm-btn w-full mb-4 !py-3">
+                                <i class="fa-brands fa-pix"></i> GERAR PIX CÓPIA E COLA
+                            </button>
+
+                            <div id="area-copia-cola" class="hidden-ksm space-y-2 mb-4">
+                                <p class="text-[10px] text-[var(--ksm-green)] font-bold uppercase">PIX CÓPIA E COLA</p>
+                                <div class="flex gap-0">
+                                    <input type="text" id="ksm-pix-string" readonly class="ksm-input !py-2 !text-xs !border-r-0 rounded-r-none truncate" />
+                                    <button onclick="copyPix()" class="ksm-btn !py-2 !px-4 rounded-l-none border-l-0" title="Copiar">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-2 pt-4 border-t border-white/5">
+                                <p class="text-[10px] text-zinc-500 mb-2 uppercase font-bold text-center">Já pagou? Insira sua chave de acesso</p>
+                                <div class="flex gap-0">
+                                    <input type="text" id="ksm-insert-key" placeholder="Cole sua chave aqui" class="ksm-input !py-2 !text-xs !border-r-0 rounded-r-none text-center" />
+                                    <button onclick="restoreAccessKey()" class="ksm-btn !py-2 !px-4 rounded-l-none border-l-0" title="Verificar Chave">
+                                        <i class="fas fa-key"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ksm-view-success" class="ksm-card hidden-ksm text-center">
+                    <i class="fas fa-check-circle text-5xl text-[var(--ksm-green)] mb-4 shadow-[0_0_30px_rgba(0,255,157,0.3)] rounded-full"></i>
+                    <h2 class="text-2xl font-bold text-white mb-2">ACESSO LIBERADO</h2>
+                    <p class="text-zinc-400 mb-4">Seu dispositivo e chave estão autorizados.</p>
+                    
+                    <div class="bg-black/60 border border-[var(--ksm-green-dim)] rounded-lg p-5 mb-6 text-left relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-[var(--ksm-green)]"></div>
+                        <h3 class="text-sm text-[var(--ksm-green)] font-bold uppercase mb-1 flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle"></i> Atenção: Guarde Sua Chave
+                        </h3>
+                        <p class="text-xs text-zinc-400 mb-3">Copie a chave abaixo. Ela será necessária para restaurar o seu acesso de 24 horas caso você limpe o navegador ou acesse o site por outro celular/computador.</p>
+                        
+                        <div class="flex gap-0">
+                            <input type="text" id="ksm-success-key" readonly class="ksm-input !py-2 !text-xs !border-r-0 rounded-r-none font-bold text-emerald-300 tracking-wider text-center" />
+                            <button onclick="copySuccessKey()" class="ksm-btn !py-2 !px-4 rounded-l-none border-l-0 shadow-none" title="Copiar Chave">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="ksm-expiry-info" class="text-sm font-mono text-[var(--ksm-green)] mb-6"></div>
+                    <button onclick="ksmCollapse()" class="ksm-btn w-full !py-3">ACESSAR CONTEÚDO</button>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="ksm-blocker" style="display:none!important"></div>
+    </div>
+
+    <div id="ksm-toast"><i class="fas fa-check mr-2"></i> <span id="ksm-toast-msg">Copiado!</span></div>
+
+    <!-- MAIN APP SCRIPT -->
+    <script>
+        // --- INICIALIZAÇÃO E REFERÊNCIAS ---
+        const { jsPDF } = window.jspdf;
+        const { PDFDocument } = window.PDFLib;
+        
+        let extractedText = '';
+        let tribunalOrigem = '';
+        let tribunalDestino = '';
+        let impetrante = 'Joaquim Pedro de Morais Filho';
+        let impetranteCPF = '133.036.496-18';
+        let impetranteCidade = 'Brasília';
+        let impetranteEstado = 'DF';
+        let isJusPostulandi = false;
+        let currentPetitionType = '';
+        let uploadedPDF = null;
+        let generatedPDFBlob = null;
+        
+        let brasaoBase64 = null;
+
+        function loadBrasaoImage() {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                brasaoBase64 = canvas.toDataURL('image/png');
+            };
+            img.onerror = () => {
+                console.warn("Aviso: Falha ao carregar a imagem do Brasão por restrições de rede. O PDF será processado sem marca d'água gráfica.");
+            };
+            img.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Coat_of_arms_of_Brazil.svg/1280px-Coat_of_arms_of_Brazil.svg.png';
+        }
+        loadBrasaoImage();
+
+        const buttons = {
+            habeas: document.getElementById('habeas-btn'),
+            embargos: document.getElementById('embargos-btn'),
+            recurso: document.getElementById('recurso-btn'),
+            mandado: document.getElementById('mandado-btn'),
+            'agravo-regimental': document.getElementById('agravo-regimental-btn'),
+            'agravo-interno': document.getElementById('agravo-interno-btn'),
+            summary: document.getElementById('summary-btn')
+        };
+
+        const statusMessage = document.getElementById('status-message');
+        const errorMessage = document.getElementById('error-message');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+
+        // --- GEMINI 2.5 API INTEGRAÇÃO (NATIVE) ---
+        function getGeminiKey(){ return (localStorage.getItem('inpiojus_gemini_key')||'').trim(); }
+        function getGeminiUrl(){
+            const apiKey = getGeminiKey();
+            const model = localStorage.getItem('inpiojus_gemini_model') || 'gemini-2.0-flash';
+            return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        }
+
+        async function fetchWithRetry(url, options) {
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            for (let i = 0; i < delays.length + 1; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        throw new Error(`HTTP ${response.status}: ${errText}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    if (i === delays.length) {
+                        throw new Error(`Falha definitiva ao comunicar com IA após múltiplas tentativas. Detalhe: ${error.message}`);
+                    }
+                    console.warn(`Tentativa de IA falhou (Aguardando ${delays[i]}ms para re-tentar)...`);
+                    await new Promise(res => setTimeout(res, delays[i]));
+                }
+            }
+        }
+
+        async function processWithGemini(userPrompt, systemPrompt) {
+            if (!getGeminiKey()) {
+                throw new Error('Configure a chave Gemini (botão Configurar API). https://aistudio.google.com/apikey');
+            }
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            const options = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            };
+
+            const result = await fetchWithRetry(getGeminiUrl(), options);
+            
+            const responseText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!responseText) throw new Error("A IA processou o pedido, mas a resposta retornou em branco ou formato inválido.");
+            
+            return responseText;
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast-notification');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3500);
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            statusMessage.style.display = 'none';
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+            statusMessage.style.display = 'block';
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file || file.type !== 'application/pdf') {
+                showError('Formato inválido. Exige-se documento PDF.');
+                return;
+            }
+            uploadedPDF = file;
+            loadingText.textContent = 'Decodificando texto do PDF...';
+            loadingOverlay.style.display = 'flex';
+            hideError();
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                let fullText = '';
+                const maxPages = Math.min(pdf.numPages, 50); 
+                for (let i = 1; i <= maxPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                }
+                
+                if (!fullText.trim()) throw new Error('Não foi possível realizar a leitura ótica (OCR não processado). PDF digitalizado como imagem pura.');
+                
+                extractedText = fullText;
+                document.getElementById('text-input').value = fullText;
+                setupProcessData(fullText);
+                
+            } catch (error) {
+                showError(`Erro técnico na decodificação do PDF: ${error.message}`);
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function handleTextInput(event) {
+            extractedText = event.target.value.trim();
+            uploadedPDF = null;
+            if (extractedText) {
+                hideError();
+                setupProcessData(extractedText);
+            } else {
+                statusMessage.textContent = 'Insira a decisão impugnada para liberar o sistema.';
+                Object.values(buttons).forEach(btn => btn.disabled = true);
+            }
+        }
+
+        function setupProcessData(text) {
+            tribunalOrigem = identifyTribunal(text) || 'TJSP';
+            updateTribunalOptions();
+            statusMessage.textContent = 'Autos recebidos com sucesso. Qualifique a advocacia.';
+            document.getElementById('impetrante-modal').style.display = 'flex';
+        }
+
+        function identifyTribunal(text) {
+            const lowerText = text.toLowerCase();
+            if (lowerText.includes('supremo tribunal federal') || /\bstf\b/.test(lowerText)) return 'STF';
+            if (lowerText.includes('superior tribunal de justiça') || /\bstj\b/.test(lowerText)) return 'STJ';
+            if (lowerText.includes('tribunal de justiça do estado de são paulo') || /\btjsp\b/.test(lowerText)) return 'TJSP';
+            if (lowerText.includes('tribunal regional federal') || /\btrf\b/.test(lowerText)) return 'TRF';
+            return null;
+        }
+
+        function updateTribunalOptions() {
+            const sel = document.getElementById('tribunal-select');
+            sel.innerHTML = `<option value="origem">Tribunal de Origem / Local (${tribunalOrigem})</option>`;
+            if (tribunalOrigem !== 'STJ') sel.innerHTML += `<option value="stj">Superior Tribunal de Justiça (STJ)</option>`;
+            if (tribunalOrigem !== 'STF') sel.innerHTML += `<option value="stf">Supremo Tribunal Federal (STF)</option>`;
+        }
+
+        function confirmImpetrante() {
+            const nImp = document.getElementById('impetrante-input').value.trim();
+            const nCpf = document.getElementById('impetrante-cpf-input').value.trim();
+            const nCidade = document.getElementById('cidade-input').value.trim();
+            const nEstado = document.getElementById('estado-input').value.trim();
+            
+            isJusPostulandi = document.getElementById('juspostulandi-check').checked;
+            
+            if (nImp) impetrante = nImp;
+            if (nCpf) impetranteCPF = nCpf;
+            if (nCidade) impetranteCidade = nCidade;
+            if (nEstado) impetranteEstado = nEstado.toUpperCase();
+            
+            document.getElementById('impetrante-modal').style.display = 'none';
+            statusMessage.textContent = 'Pronto para impetração. Selecione o rito processual adequado.';
+            Object.values(buttons).forEach(btn => btn.disabled = false);
+        }
+
+        function keepImpetrante() {
+            isJusPostulandi = document.getElementById('juspostulandi-check').checked;
+            
+            document.getElementById('impetrante-modal').style.display = 'none';
+            statusMessage.textContent = 'Pronto para impetração. Selecione o rito processual adequado.';
+            Object.values(buttons).forEach(btn => btn.disabled = false);
+        }
+
+        function showTribunalModal(type) {
+            currentPetitionType = type;
+            document.getElementById('tribunal-modal').style.display = 'flex';
+        }
+
+        function confirmTribunal() {
+            const selVal = document.getElementById('tribunal-select').value;
+            tribunalDestino = selVal === 'origem' ? tribunalOrigem : selVal.toUpperCase();
+            document.getElementById('tribunal-modal').style.display = 'none';
+            generatePetitionLogic(currentPetitionType);
+        }
+
+        function getPetitionName(type) {
+            const names = {
+                'habeas': 'Habeas Corpus', 'embargos': 'Embargos de Declaração',
+                'recurso': 'Recurso Ordinário', 'mandado': 'Mandado de Segurança',
+                'agravo-regimental': 'Agravo Regimental', 'agravo-interno': 'Agravo Interno'
+            };
+            return names[type] || 'Peça Processual';
+        }
+
+        async function generatePetitionLogic(type) {
+            const isSummary = (type === 'summary');
+            const actionName = isSummary ? 'Síntese Jurisprudencial' : `Petiçao de ${getPetitionName(type)}`;
+            const sizePref = document.getElementById('petition-size').value;
+            
+            statusMessage.textContent = `A IA Governamental está redigindo a ${actionName}. Isso levará alguns segundos...`;
+            hideError();
+            loadingOverlay.style.display = 'flex';
+            loadingText.textContent = `Construindo Teses para ${getPetitionName(type)}...`;
+
+            try {
+                let systemPrompt = `Você é um advogado sênior e jurista brasileiro altamente renomado, com atuação especializada nos Tribunais Superiores (STF/STJ). Seu conhecimento é exaustivo e está atualizado no ordenamento jurídico de 2025/2026.
+Você está atuando num sistema Governamental de geração de peças judiciais.
+Siga EXATAMENTE as regras:
+1. PROIBIDO MARKDOWN: O texto deve ser plano e corrido (NÃO utilize de forma alguma *, **, #, ou ---).
+2. LINGUAGEM EXTREMAMENTE FORMAL e robusta. Demonstre elevada inteligência argumentativa e total coerência fática/jurídica.
+3. EMENTA OBRIGATÓRIA (Apenas para Petições): Logo no início, APÓS a qualificação das partes, crie uma ementa no formato exato:
+[EMENTA]
+Texto do resumo das teses invocadas e base legal, redigido no formato de ementa de jurisprudência (ex: EMENTA. PENAL E PROCESSO PENAL. HABEAS CORPUS...).
+[/EMENTA]
+4. EXTENSÃO E ROBUSTEZ: O usuário solicitou que a peça seja: "${sizePref}". Siga rigorosamente este comando de tamanho.
+5. Se for resumo, resuma em parágrafo único, focando na base fática, fundamentos da decisão e dispositivo legal aplicável.
+6. REGRA RESTRITA DE QUALIFICAÇÃO (CRÍTICA): É TERMINANTEMENTE PROIBIDO inventar, presumir ou inserir profissão e estado civil na qualificação das partes. NÃO crie um endereço completo (rua/bairro/número). Qualifique a parte estritamente informando que ela é "residente e domiciliada na cidade de [Cidade fornecida] - [Estado fornecido]".`;
+
+                let userPrompt = '';
+                if (isSummary) {
+                    userPrompt = `Realize a síntese (resumo) desta decisão judicial, com precisão técnica e coesão:\n\n${extractedText.substring(0, 15000)}`;
+                } else {
+                    const tipoAssinatura = isJusPostulandi ? "Impetrante (atuando em CAUSA PRÓPRIA, rito Jus Postulandi)" : "Patrono/Advogado(a)";
+                    userPrompt = `Elabore a petição integral de ${getPetitionName(type)}.
+Endereçamento: Excelentíssimo Senhor Ministro Presidente do ${tribunalDestino}.
+${tipoAssinatura}: ${impetrante}. Documento (OAB/CPF): ${impetranteCPF}.
+Localidade (Cidade/UF): ${impetranteCidade} / ${impetranteEstado}.
+Fatos, fundamentos e decisão impugnada a serem combatidos de forma veemente baseiam-se na íntegra a seguir:\n\n${extractedText.substring(0, 20000)}
+Gere a peça completíssima.`;
+                }
+
+                const resultText = await processWithGemini(userPrompt, systemPrompt);
+                let cleanedText = resultText.replace(/[\*#]/g, ''); 
+
+                if (isSummary) {
+                    const sumEl = document.getElementById('summary');
+                    sumEl.textContent = cleanedText;
+                    sumEl.style.display = 'block';
+                    statusMessage.textContent = 'Síntese Jurídica gerada e auditada com sucesso.';
+                } else {
+                    generatePDF(type, cleanedText);
+                    statusMessage.textContent = `${getPetitionName(type)} elaborada, formatada e pronta.`;
+                    if (uploadedPDF) {
+                        document.getElementById('combine-pdf-modal').style.display = 'flex';
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+                showError(error.message);
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        const generateSummary = () => generatePetitionLogic('summary');
+
+        function generatePDF(type, content) {
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            
+            const pageWidth = doc.internal.pageSize.width;
+            const pageHeight = doc.internal.pageSize.height;
+            const marginLeft = 25; 
+            const marginRight = 20;
+            const maxLineWidth = pageWidth - marginLeft - marginRight;
+            const lineSpacing = 7.5; 
+            const paragraphSpacing = 6;
+            
+            function drawLayout(pdfDoc, pageNum) {
+                pdfDoc.setDrawColor(0, 0, 0);
+                pdfDoc.setLineWidth(0.3);
+                pdfDoc.line(15, 10, 15, pageHeight - 10);
+                pdfDoc.line(16, 10, 16, pageHeight - 10);
+                pdfDoc.line(pageWidth - 12, 10, pageWidth - 12, pageHeight - 10);
+
+                if (brasaoBase64) {
+                    pdfDoc.setGState(new pdfDoc.GState({opacity: 0.04}));
+                    const wmSize = 130;
+                    pdfDoc.addImage(brasaoBase64, 'PNG', (pageWidth - wmSize)/2, (pageHeight - wmSize)/2, wmSize, wmSize);
+                    pdfDoc.setGState(new pdfDoc.GState({opacity: 1.0}));
+                }
+
+                if (pageNum === 1 && brasaoBase64) {
+                    const headerSize = 25;
+                    pdfDoc.addImage(brasaoBase64, 'PNG', (pageWidth - headerSize)/2, 15, headerSize, headerSize);
+                    return 50; 
+                }
+                return 25; 
+            }
+
+            let cursorY = drawLayout(doc, 1);
+            let ementaMode = false;
+            let ementaBuffer = "";
+
+            const paragraphs = content.split('\n');
+            
+            for (let i = 0; i < paragraphs.length; i++) {
+                let paragraph = paragraphs[i].trim();
+                if (paragraph === '') {
+                    cursorY += paragraphSpacing;
+                    continue;
+                }
+
+                if (paragraph.includes('[EMENTA]')) {
+                    ementaMode = true;
+                    paragraph = paragraph.replace('[EMENTA]', '').trim();
+                }
+
+                if (ementaMode) {
+                    let isEnd = false;
+                    if (paragraph.includes('[/EMENTA]')) {
+                        ementaMode = false;
+                        isEnd = true;
+                        paragraph = paragraph.replace('[/EMENTA]', '').trim();
+                    }
+                    ementaBuffer += paragraph + " ";
+                    
+                    if (isEnd || (!ementaMode)) {
+                        doc.setFont('times', 'italic');
+                        doc.setFontSize(10);
+                        const ementaWidth = 75; 
+                        const lines = doc.splitTextToSize(ementaBuffer.trim(), ementaWidth);
+                        const startX = pageWidth - marginRight - ementaWidth;
+                        
+                        cursorY += 5;
+                        lines.forEach(line => {
+                            if (cursorY + 5 > pageHeight - 20) {
+                                doc.addPage();
+                                cursorY = drawLayout(doc, doc.internal.getNumberOfPages());
+                            }
+                            doc.text(line, startX, cursorY);
+                            cursorY += 5;
+                        });
+                        doc.setFont('times', 'normal');
+                        doc.setFontSize(12);
+                        cursorY += paragraphSpacing * 2;
+                        ementaBuffer = "";
+                    }
+                    continue; 
+                }
+
+                const isTitle = /^(EXCELENTÍSSIMO|I\.|II\.|III\.|IV\.|V\.)/i.test(paragraph) ||
+                                /^(IMPETRANTE|PACIENTE|AUTORIDADE COATORA)/i.test(paragraph) ||
+                                /^(Nestes termos,|Pede deferimento)/i.test(paragraph);
+
+                if (isTitle) doc.setFont('times', 'bold');
+                else doc.setFont('times', 'normal');
+                
+                doc.setFontSize(12);
+
+                const lines = doc.splitTextToSize(paragraph, maxLineWidth);
+                
+                lines.forEach(line => {
+                    if (cursorY + lineSpacing > pageHeight - 20) {
+                        doc.addPage();
+                        cursorY = drawLayout(doc, doc.internal.getNumberOfPages());
+                        if (isTitle) doc.setFont('times', 'bold');
+                        else doc.setFont('times', 'normal');
+                        doc.setFontSize(12);
+                    }
+                    doc.text(line, marginLeft, cursorY);
+                    cursorY += lineSpacing;
+                });
+                
+                cursorY += paragraphSpacing;
+            }
+
+            const totalPages = doc.internal.getNumberOfPages();
+            doc.setFont('times', 'italic');
+            doc.setFontSize(9);
+            for (let i = 1; i <= totalPages; i++) {
+                doc.setPage(i);
+                doc.text(`Fls. ${i} / ${totalPages}`, pageWidth - 30, pageHeight - 8);
+                doc.text(`INPIOJUS Governamental IA - Patrocínio: ${impetrante}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+            }
+
+            generatedPDFBlob = doc.output('blob');
+            const pdfUrl = URL.createObjectURL(generatedPDFBlob);
+            
+            const ds = document.getElementById('download-section');
+            ds.innerHTML = '';
+            const downloadLink = document.createElement('a');
+            downloadLink.href = pdfUrl;
+            downloadLink.className = 'download-link';
+            downloadLink.download = `${getPetitionName(type).replace(/\s/g, '_')}_Oficial.pdf`;
+            downloadLink.textContent = `Salvar Documento Governamental (PDF)`;
+            ds.appendChild(downloadLink);
+        }
+
+        async function combinePDFs() {
+            if (!generatedPDFBlob || !uploadedPDF) return skipCombinePDFs();
+            
+            document.getElementById('combine-pdf-modal').style.display = 'none';
+            loadingOverlay.style.display = 'flex';
+            loadingText.textContent = 'Autuando volumes de anexo processual...';
+            
+            try {
+                const combinedPdfDoc = await PDFDocument.create();
+                
+                const petitionBytes = await generatedPDFBlob.arrayBuffer();
+                const petitionPdfDoc = await PDFDocument.load(petitionBytes);
+                const petitionPages = await combinedPdfDoc.copyPages(petitionPdfDoc, petitionPdfDoc.getPageIndices());
+                petitionPages.forEach(page => combinedPdfDoc.addPage(page));
+                
+                const decisionBytes = await uploadedPDF.arrayBuffer();
+                const decisionPdfDoc = await PDFDocument.load(decisionBytes);
+                const decisionPages = await combinedPdfDoc.copyPages(decisionPdfDoc, decisionPdfDoc.getPageIndices());
+                decisionPages.forEach(page => combinedPdfDoc.addPage(page));
+                
+                const combinedPdfBytes = await combinedPdfDoc.save();
+                const combinedBlob = new Blob([combinedPdfBytes], { type: 'application/pdf' });
+                const combinedUrl = URL.createObjectURL(combinedBlob);
+                
+                const ds = document.getElementById('download-section');
+                ds.innerHTML = ''; 
+                const combinedLink = document.createElement('a');
+                combinedLink.href = combinedUrl;
+                combinedLink.className = 'download-link';
+                combinedLink.download = `Volume_Unico_Peticao_e_Anexos.pdf`;
+                combinedLink.textContent = `Salvar Autos (Petição + Decisão Anexa)`;
+                ds.appendChild(combinedLink);
+                
+                statusMessage.textContent = 'Autos unificados e prontos para download!';
+            } catch (error) {
+                console.error(error);
+                showError(`Erro na união dos autos documentais: ${error.message}`);
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function skipCombinePDFs() {
+            document.getElementById('combine-pdf-modal').style.display = 'none';
+            statusMessage.textContent = 'Documento individual pronto para arquivamento local.';
+        }
+    </script>
+
+    <!-- FIREBASE & LÓGICA KSM (Alterado para 24 horas e 6,90) -->
+    <!-- Paywall secrets removed for public OSS release -->
+<script>
+console.info('INPIOJUS 1.0.0 open — Joaquim Pedro de Morais Filho <zicutake@mail.ru>');
+</script>
+
+
+<div id="api-config-bar" style="position:fixed;top:12px;right:12px;z-index:9000;display:flex;gap:8px;align-items:center">
+  <a href="docs/tutorial.html" style="font:600 12px Inter,sans-serif;color:#1e3a8a;text-decoration:none;background:#f1f5f9;border:1px solid #cbd5e1;padding:8px 12px;border-radius:8px">Tutorial</a>
+  <button type="button" onclick="openApiConfig()" style="font:600 12px Inter,sans-serif;background:#1e3a8a;color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer">
+    <i class="fas fa-key"></i> Configurar API Gemini
+  </button>
+</div>
+<footer style="max-width:1200px;margin:2rem auto;padding:1.5rem 5vw;border-top:2px solid #cbd5e1;font:14px Inter,sans-serif;color:#334155;text-align:center">
+  <strong>INPIOJUS 1.0.0</strong> — IA jurídica e argumentos processuais<br>
+  Desenvolvedor: <strong>Joaquim Pedro de Morais Filho</strong> · <a href="mailto:zicutake@mail.ru">zicutake@mail.ru</a><br>
+  <span style="font-size:12px;color:#64748b">Assinado build-1000 · MIT · © 2026 · Uso assistivo; revise com advogado</span>
+</footer>
+<script>
+function openApiConfig(){
+  const k = prompt('Cole sua chave Gemini (Google AI Studio). Fica só no seu navegador (localStorage):', localStorage.getItem('inpiojus_gemini_key')||'');
+  if(k===null) return;
+  localStorage.setItem('inpiojus_gemini_key', k.trim());
+  const m = prompt('Modelo Gemini (ex: gemini-2.0-flash):', localStorage.getItem('inpiojus_gemini_model')||'gemini-2.0-flash');
+  if(m) localStorage.setItem('inpiojus_gemini_model', m.trim());
+  alert(k.trim() ? 'Chave salva localmente.' : 'Chave removida.');
+}
+</script>
+
+</body>
+</html>

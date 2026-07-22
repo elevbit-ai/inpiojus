@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<!--
+  INPIOJUS 1.0.0 — Tutorial oficial
+  Joaquim Pedro de Morais Filho <zicutake@mail.ru>
+  © 2026 MIT
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Joaquim Pedro de Morais Filho">
+  <meta name="contact" content="zicutake@mail.ru">
+  <title>Tutorial · INPIOJUS 1.0.0 | Joaquim Pedro de Morais Filho</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; background: #f8fafc; color: #0f172a; }
+    h1, h2 { font-family: 'Playfair Display', Georgia, serif; color: #1e3a8a; }
+    code { background: #e2e8f0; padding: 1px 6px; border-radius: 4px; font-size: 0.9em; }
+    pre { background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 12px; line-height: 1.5; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; }
+    th { background: #1e3a8a; color: #fff; }
+    .callout { border-left: 4px solid #1e3a8a; background: #eff6ff; padding: 1rem 1.25rem; border-radius: 0 8px 8px 0; }
+    .warn { border-left-color: #b91c1c; background: #fef2f2; }
+    a { color: #1d4ed8; }
+  </style>
+</head>
+<body class="min-h-screen">
+<header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+  <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+    <div>
+      <div class="font-bold text-blue-900 tracking-wide">INPIOJUS 1.0.0 · Tutorial</div>
+      <div class="text-xs text-slate-500">IA jurídica · argumentos processuais · Gemini</div>
+    </div>
+    <a href="../index.html" class="text-sm font-semibold bg-blue-900 text-white px-3 py-1.5 rounded-lg no-underline">← Abrir app</a>
+  </div>
+</header>
+
+<main class="max-w-4xl mx-auto px-4 py-10 space-y-10 leading-relaxed">
+  <section>
+    <h1 class="text-3xl mb-2">Tutorial e especificação do INPIOJUS</h1>
+    <p class="text-slate-600">Documento oficial da versão <strong>1.0.0</strong>, assinado por
+      <strong>Joaquim Pedro de Morais Filho</strong> · <a href="mailto:zicutake@mail.ru">zicutake@mail.ru</a></p>
+  </section>
+
+  <section class="callout">
+    <strong>O que é o INPIOJUS?</strong>
+    Sistema web de <em>IA jurídica assistiva</em> que lê decisões/autos (texto ou PDF) e gera
+    <strong>petições</strong> ou <strong>resumos</strong> com estrutura argumentativa, usando o modelo
+    generativo <strong>Google Gemini</strong>. Não é órgão do governo; o visual institucional é de apresentação.
+  </section>
+
+  <section id="assinatura">
+    <h2 class="text-2xl mb-3">1. Assinatura do projeto</h2>
+    <pre>Projeto:     INPIOJUS
+Versão:      1.0.0 (build-1000)
+Criador:     Joaquim Pedro de Morais Filho
+E-mail:      zicutake@mail.ru
+Licença:     MIT · © 2026
+Repositório: github.com/elevbit-ai/inpiojus</pre>
+  </section>
+
+  <section id="ia">
+    <h2 class="text-2xl mb-3">2. Como a IA é usada</h2>
+    <p>O motor central é a API <code>generateContent</code> do Gemini. Cada geração combina duas camadas de texto:</p>
+    <table class="my-4">
+      <tr><th>Camada</th><th>Nome técnico</th><th>Função no INPIOJUS</th></tr>
+      <tr>
+        <td><strong>System instruction</strong></td>
+        <td><code>systemInstruction</code></td>
+        <td>Define o papel da IA: redator jurídico formal, respeito ao rito, estrutura da peça, tom profissional.</td>
+      </tr>
+      <tr>
+        <td><strong>User prompt</strong></td>
+        <td><code>contents[].parts[].text</code></td>
+        <td>Traz os autos/decisão, dados do impetrante, tribunal destino e o tipo de peça escolhida.</td>
+      </tr>
+      <tr>
+        <td><strong>Resposta</strong></td>
+        <td><code>candidates[0].content</code></td>
+        <td>Texto da petição ou resumo, depois exibido e opcionalmente convertido em PDF.</td>
+      </tr>
+    </table>
+    <pre>Browser (INPIOJUS)
+   │  PDF → pdf.js → texto
+   │  ou textarea (autos)
+   ▼
+processWithGemini(userPrompt, systemPrompt)
+   │  POST generativelanguage.googleapis.com
+   │  model: gemini-2.0-flash (configurável)
+   ▼
+Texto jurídico gerado → tela / PDF</pre>
+    <p class="mt-3"><strong>Chave API:</strong> salva só no <code>localStorage</code> (<code>inpiojus_gemini_key</code>).
+      Nunca é enviada ao GitHub. Obtenha em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</p>
+  </section>
+
+  <section id="argumentos">
+    <h2 class="text-2xl mb-3">3. Argumentos jurídicos no projeto</h2>
+    <p>Os <strong>argumentos</strong> não são um banco de jurisprudência fixo: a IA é instruída a montar raciocínio em camadas típicas do processo brasileiro:</p>
+    <ol class="list-decimal pl-6 space-y-2 text-slate-700">
+      <li><strong>Qualificação</strong> — partes, foro, impetrante / jus postulandi</li>
+      <li><strong>Fatos</strong> — extrair da decisão impugnada os pontos controvertidos</li>
+      <li><strong>Direito</strong> — fundamentos constitucionais/legais adequados ao rito</li>
+      <li><strong>Pedido</strong> — o que se requer (liminar, provimento, reforma, etc.)</li>
+      <li><strong>Fecho</strong> — local, data, assinatura / advogado ou parte</li>
+    </ol>
+    <p class="mt-3">Ritos disponíveis na interface (botões principais):</p>
+    <table class="my-3">
+      <tr><th>Botão</th><th>Peça / uso</th><th>Foco argumentativo</th></tr>
+      <tr><td>Habeas Corpus</td><td>HC</td><td>Liberdade / ilegalidade de coação</td></tr>
+      <tr><td>Embargos</td><td>Embargos de declaração</td><td>Omissão, contradição, obscuridade</td></tr>
+      <tr><td>Recurso</td><td>Recurso genérico / reforma</td><td>Error in judicando / procedendo</td></tr>
+      <tr><td>Mandado</td><td>Mandado de segurança</td><td>Direito líquido e certo</td></tr>
+      <tr><td>Agravo regimental</td><td>AgRg</td><td>Reforma de decisão monocrática</td></tr>
+      <tr><td>Agravo interno</td><td>AgInt</td><td>Órgão colegiado / regimento interno</td></tr>
+      <tr><td>Resumo</td><td>Síntese</td><td>Mapa da decisão e pontos de ataque</td></tr>
+    </table>
+    <div class="callout warn mt-4 text-sm">
+      A IA pode <strong>alucinar</strong> citações de lei ou jurisprudência. Todo argumento deve ser
+      <strong>conferido</strong> em fonte oficial (Planalto, tribunais, diários) por profissional habilitado.
+    </div>
+  </section>
+
+  <section id="fluxo">
+    <h2 class="text-2xl mb-3">4. Fluxo de uso (passo a passo)</h2>
+    <ol class="list-decimal pl-6 space-y-2">
+      <li>Abra o app e clique <strong>Configurar API Gemini</strong>.</li>
+      <li>Cole a chave e, se quiser, o nome do modelo.</li>
+      <li>Envie um <strong>PDF</strong> da decisão ou cole o texto na caixa.</li>
+      <li>Preencha impetrante / CPF / cidade (modal) ou mantenha padrão.</li>
+      <li>Escolha o <strong>tribunal destino</strong> quando solicitado.</li>
+      <li>Clique no rito desejado (HC, embargos, etc.).</li>
+      <li>Aguarde a IA; revise o texto gerado.</li>
+      <li>Baixe o PDF se a opção estiver disponível.</li>
+    </ol>
+  </section>
+
+  <section id="stack">
+    <h2 class="text-2xl mb-3">5. Stack técnica</h2>
+    <table>
+      <tr><th>Componente</th><th>Tecnologia</th></tr>
+      <tr><td>UI</td><td>HTML, CSS, Tailwind (CDN), Font Awesome</td></tr>
+      <tr><td>IA</td><td>Google Gemini API (REST)</td></tr>
+      <tr><td>PDF leitura</td><td>pdf.js</td></tr>
+      <tr><td>PDF escrita</td><td>jsPDF, pdf-lib</td></tr>
+      <tr><td>Hospedagem demo</td><td>GitHub Pages</td></tr>
+    </table>
+  </section>
+
+  <section id="legal">
+    <h2 class="text-2xl mb-3">6. Ética e limites</h2>
+    <ul class="list-disc pl-6 space-y-1 text-slate-700">
+      <li>Uso <strong>assistivo</strong> — não substitui advogado ou defensor público.</li>
+      <li>Não protocolar peça sem revisão humana completa.</li>
+      <li>Não inserir dados sensíveis de terceiros em serviços de nuvem sem base legal (LGPD).</li>
+      <li>Proibido uso para falsidade, fraude processual ou simulação de atos oficiais.</li>
+    </ul>
+  </section>
+
+  <section id="repo">
+    <h2 class="text-2xl mb-3">7. Repositório e pastas</h2>
+    <pre>inpiojus/
+├── index.html           # Aplicação principal (assinada)
+├── docs/tutorial.html   # Este tutorial
+├── VERSION · AUTHORS · LICENSE · CHANGELOG.md · README.md
+└── assets/              # recursos futuros</pre>
+  </section>
+
+  <footer class="border-t border-slate-200 pt-6 pb-12 text-sm text-slate-500">
+    <p><strong>INPIOJUS 1.0.0</strong> · © 2026 Joaquim Pedro de Morais Filho · zicutake@mail.ru</p>
+    <p class="mt-1">Assinado no código-fonte · Licença MIT</p>
+    <a href="../index.html" class="inline-block mt-4 font-semibold text-blue-800">→ Voltar ao aplicativo</a>
+  </footer>
+</main>
+</body>
+</html>
